@@ -2,6 +2,8 @@ import sqlite3
 import streamlit as st
 import pandas as pd
 import datetime
+import plotly.express as px 
+
 
 Mitglieder = ['Leon', 'Zierer', 'Markus', 'Reiter',
  'Seppe', 'Christoph', 'Holzmann']
@@ -31,8 +33,13 @@ cursor.execute('''CREATE TABLE IF NOT EXISTS kasse (
                     bezahlte_schulden INT)''')
 # Initialisiere die Kasse
 for mitglied in Mitglieder:
+    cursor.execute("SELECT COUNT(*) FROM kasse WHERE mitglied= ?", (mitglied,))
+    count = cursor.fetchone()[0]
+    if count != 0:
+        continue
     cursor.execute("INSERT INTO kasse (mitglied, offene_schulden, bezahlte_schulden) VALUES (?, ?, ?)",
     (mitglied, 0, 0))
+    conn.commit()
 
 
 def testmodus():
@@ -202,6 +209,37 @@ def datums_filter():
 
 
 
+def stammtische_zählen():
+    cursor.execute("SELECT * FROM stammtische")
+    rows = cursor.fetchall()
+    stats = {}
+    for mitglied in Mitglieder:
+        if mitglied not in stats:
+            stats[mitglied] = [0, 0]
+    for row in rows:
+        for mitglied in Mitglieder:
+            if mitglied in row[1]:
+                stats[mitglied][0] += 1
+            if mitglied in row[2] or mitglied in row[3]:
+                stats[mitglied][1] += 1
+    return stats
+    
+
+
+def stats():
+    dic = stammtische_zählen()
+    labels = list(dic.keys())
+    anwesenheiten = []
+    veranstaltungen = []
+    for kollege in dic:
+        anwesenheiten.append(dic[kollege][0])
+        veranstaltungen.append(dic[kolleg][1])
+    kuchen_anwesenheiten = px.pie(names= labels, values= anwesenheiten)
+    st.plotly_chart(kuchen_anwesenheiten)
+    kuchen_veranstaltungen = px.pie(names= labels, values= veranstaltungen)
+    st.plotly_chart(kuchen_veranstaltungen)
+
+    
 
 def test():
     # tab1, tab2 = st.tabs(["Tab 1", "Tab2"])
