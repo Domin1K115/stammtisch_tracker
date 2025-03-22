@@ -3,7 +3,6 @@ import streamlit as st
 import pandas as pd
 import datetime
 import plotly.express as px 
-import os
 
 
 Mitglieder = ['Leon', 'Zierer', 'Markus', 'Reiter',
@@ -255,16 +254,8 @@ def stats_tab2():
 
 
 def impressum():
-    if st.secrets.get('is_deployes') == 'true':
-        st.write('True')
-    else:
-        st.write('False')
-    # if __name__ == __main__:
-    #     st.video('Rick Astley - Never Gonna Give You Up (Official Music Video).mp4',
-    # autoplay= True, loop= True)
-    # else:
-    #     st.video('python_code/Rick Astley - Never Gonna Give You Up (Official Music Video).mp4',
-    #     autoplay= True, loop= True)
+        st.video('python_code/Rick Astley - Never Gonna Give You Up (Official Music Video).mp4',
+        autoplay= True, loop= True)
 
     
 
