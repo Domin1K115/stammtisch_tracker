@@ -254,7 +254,7 @@ def stats_tab2():
 
 
 def impressum():
-    st.video('Rick Astley - Never Gonna Give You Up (Official Music Video).mp4',
+    st.video('python_code/Rick Astley - Never Gonna Give You Up (Official Music Video).mp4',
     autoplay= True, loop= True)
 
     
