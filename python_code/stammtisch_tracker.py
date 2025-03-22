@@ -102,6 +102,8 @@ def neuen_stammtisch_eintragen():
             veranstalter2 = st.radio('Veranstalter 2:', Orte)
             if veranstalter2 == veranstalter:
                 st.error('Bitte anderen Veranstaltungsort auswählen')
+        else:
+            veranstalter2 = '-'
 
     datum = st.date_input('Datum:', format= datumsformat)
     cursor.execute("SELECT COUNT(*) FROM stammtische WHERE datum = ?", (datum,))
@@ -254,7 +256,11 @@ def stats_tab2():
 
 
 def impressum():
+    try:
         st.video('python_code/Rick Astley - Never Gonna Give You Up (Official Music Video).mp4',
+        autoplay= True, loop= True)
+    except st.streamlit.runtime.media_file_storage.MediaFileStorageError:
+        st.video('Rick Astley - Never Gonna Give You Up (Official Music Video).mp4',
         autoplay= True, loop= True)
 
     
