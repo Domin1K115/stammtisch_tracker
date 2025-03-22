@@ -255,7 +255,7 @@ def stats_tab2():
 
 
 def impressum():
-    if os.getenv("STREAMLIT_SERVER_MODE") == True:
+    if os.getenv("STREAMLIT_SERVER_MODE") == 'true':
         st.write('True')
     else:
         st.write('False')
