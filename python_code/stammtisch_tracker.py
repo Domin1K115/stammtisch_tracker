@@ -226,18 +226,36 @@ def stammtische_zählen():
     
 
 
-def stats():
+def stats_tab1():
     dic = stammtische_zählen()
     labels = list(dic.keys())
     anwesenheiten = []
     veranstaltungen = []
     for kollege in dic:
         anwesenheiten.append(dic[kollege][0])
-        veranstaltungen.append(dic[kolleg][1])
-    kuchen_anwesenheiten = px.pie(names= labels, values= anwesenheiten)
-    st.plotly_chart(kuchen_anwesenheiten)
-    kuchen_veranstaltungen = px.pie(names= labels, values= veranstaltungen)
-    st.plotly_chart(kuchen_veranstaltungen)
+        veranstaltungen.append(dic[kollege][1])
+
+    spalte1, spalte2 = st.columns(2)
+    with spalte1:
+        kuchen_anwesenheiten = px.pie(names= labels, values= anwesenheiten)
+        kuchen_anwesenheiten.update_traces(textposition='inside', textinfo='label+percent+value')
+        st.subheader('Anwesenheit')
+        st.plotly_chart(kuchen_anwesenheiten)
+    with spalte2:
+        kuchen_veranstaltungen = px.pie(names= labels, values= veranstaltungen)
+        kuchen_veranstaltungen.update_traces(textposition='inside', textinfo= 'label+percent+value')
+        st.subheader('Veranstaltungen')
+        st.plotly_chart(kuchen_veranstaltungen)
+
+
+def stats_tab2():
+    dic = stammtische_zählen()
+
+
+
+def impressum():
+    st.video('Rick Astley - Never Gonna Give You Up (Official Music Video).mp4',
+    autoplay= True, loop= True)
 
     
 
@@ -264,23 +282,27 @@ def main():
         testmodus2()
     if  test_auswahl == True:
         testmodus()
-    if auswahl == Sidebarauswahl[0]:
-        st.header(Sidebarauswahl[0])
+    if auswahl == Sidebarauswahl[0]: # Neuer Stammtisch
+        st.header(Sidebarauswahl[0], )
         neuen_stammtisch_eintragen()
-    elif auswahl == Sidebarauswahl[1]:
+    elif auswahl == Sidebarauswahl[1]: # Kasse 
         st.header(Sidebarauswahl[1])
         kasse()
-    elif auswahl == Sidebarauswahl[2]:
+    elif auswahl == Sidebarauswahl[2]: # Liste
         st.header(Sidebarauswahl[2])
         filterkriterium = veranstalter_filter()
         liste_anzeigen(filterkriterium, oder)
         # datums_filter()
-    elif auswahl == Sidebarauswahl[3]:
+    elif auswahl == Sidebarauswahl[3]: # Statistiken
         st.header(Sidebarauswahl[3])
-        stats()
-    elif auswahl == Sidebarauswahl[4]:
+        tab1, tab2 = st.tabs(['Kuchen', 'Pokal'])
+        with tab1:
+            stats_tab1()
+        with tab2:
+            stats_tab2()        
+    elif auswahl == Sidebarauswahl[4]: # Impressum
         st.header(Sidebarauswahl[4])
-        pass
+        impressum()
 
 
     
