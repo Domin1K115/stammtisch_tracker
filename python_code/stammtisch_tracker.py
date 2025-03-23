@@ -1,10 +1,11 @@
+# importieren aller Abhängigkeiten
 import sqlite3
 import streamlit as st
 import pandas as pd
 import datetime
 import plotly.express as px 
 
-
+# globale Variablen definieren
 Mitglieder = ['Leon', 'Zierer', 'Markus', 'Reiter',
  'Seppe', 'Christoph', 'Hoize']
 
@@ -15,54 +16,62 @@ Sidebarauswahl = ['Neuer Stammtisch', 'Kasse', 'Liste', 'Statistiken', 'Impressu
 
 datumsformat = 'DD.MM.YYYY'
 
-# Verbindung zur SQLite-Datenbank herstellen
+datum_schon_vorhanden_error = 'Zu diesem Datum sind schon Daten vorhanden'
+
+# format d bedeutet int für float in f wechseln optional .n für nachkommmastellen davor
+kassenformat = st.column_config.NumberColumn(format= "%d €")
+
+# Verbindung zu den SQLite-Datenbanken herstellen
 conn = sqlite3.connect("app_data.db")
 cursor = conn.cursor()
 
 conn2 = sqlite3.connect("realle_daten.db")
 cursor2 = conn2.cursor()
 
-# Tabelle "stammtische" erstellen
-cursor.execute("""CREATE TABLE IF NOT EXISTS stammtische(
-                    datum DATE, 
-                    anwesenheit TEXT, 
-                    veranstalter TEXT, 
-                    veranstalter2 TEXT)""")
+def tabellen_in_db_erstellen(): # Tabelle "stammtische" erstellen
+    cursor.execute("""CREATE TABLE IF NOT EXISTS stammtische(
+                        datum DATE PRIMARY KEY, 
+                        anwesenheit TEXT, 
+                        veranstalter TEXT, 
+                        veranstalter2 TEXT)""")     
 
-# Tabelle "kasse" erstellen
-cursor.execute("""CREATE TABLE IF NOT EXISTS kasse(
+    # Tabelle "kasse" erstellen
+    cursor.execute("""CREATE TABLE IF NOT EXISTS kasse(
                     mitglied TEXT PRIMARY KEY, 
                     offene_schulden INT, 
                     bezahlte_schulden INT)""")
-# Initialisiere die Kasse
-for mitglied in Mitglieder:
-    cursor.execute("SELECT COUNT(*) FROM kasse WHERE mitglied= ?", (mitglied,))
-    count = cursor.fetchone()[0]
-    if count != 0:
-        continue
-    cursor.execute("INSERT INTO kasse (mitglied, offene_schulden, bezahlte_schulden) VALUES (?, ?, ?)",
-    (mitglied, 0, 0))
-    conn.commit()
+
+tabellen_in_db_erstellen() # funktion wird direkt gecallt
+
+def init_kasse():# Kasse initialisieren
+    for mitglied in Mitglieder: # Hier wird geprüft, ob die namen aus Mitglieder schon in der db gelistet sind
+        cursor.execute("SELECT COUNT(*) FROM kasse WHERE mitglied= ?", (mitglied,))
+        count = cursor.fetchone()[0]
+        if count != 0:
+            continue
+    # wenn nicht wird hier für jedes Mitlied die offenen und bezahlten Schulden auf 0 gesetzt
+        cursor.execute("""INSERT INTO kasse 
+                        (mitglied, offene_schulden, bezahlte_schulden) 
+                        VALUES (?, ?, ?)""",
+                        (mitglied, 0, 0))
+        conn.commit()
+
+init_kasse() # funktion wird direkt gecallt, damit die db bei jedem refresh initialisiert it
 
 
-def testmodus():
-    with st.sidebar:
-        löschen = st.button('Datenbank leeren')
+def testmodus(): # temporärer Testmodus
+    with st.sidebar: # legt die zwei Knöpfe Datenbank leeren und Testdaten einfügen an
+        löschen = st.button('Datenbanken leeren')
         testdaten = st.button('Testdaten einfügen')
-    if löschen == True:
+    if löschen == True: # wenn der knopf gedrückt wird werden beide Db's geleert und neu erstellt
         cursor.execute("DROP TABLE IF EXISTS stammtische")
-        cursor.execute('''CREATE TABLE IF NOT EXISTS stammtische (
-                    datum DATE, 
-                    anwesenheit TEXT, 
-                    veranstalter TEXT, 
-                    veranstalter2 TEXT)''')
-    if testdaten == True:
-        cursor.execute('''CREATE TABLE IF NOT EXISTS stammtische (
-                    datum DATE, 
-                    anwesenheit TEXT, 
-                    veranstalter TEXT, 
-                    veranstalter2 TEXT)''')
-        test_datum = ["2024-07-11", "2024-10-24", "2024-07-18", "2024-04-18"]
+        cursor.execute("DROP TABLE IF EXISTS kasse")
+        tabellen_in_db_erstellen()
+        init_kasse()
+    if testdaten == True: # hier werden einige Testdaten in die Datenbank gespeichert
+        tabellen_in_db_erstellen()
+
+        test_datum = ["11.07.2024", "24.10.2024", "18.07.2024", "18.04.2024"] # Hardcoded inputs
         test_anwesenheit = ["Leon, Zierer, Markus, Reiter, Seppe, Christoph, Holzmann", 
         "Leon, Zierer, Reiter, Seppe, Holzmann", 
         "Leon, Zierer, Reiter, Seppe, Holzmann, Christoph", 
@@ -74,32 +83,40 @@ def testmodus():
             an = test_anwesenheit[i]
             ve = test_veranstalter[i]
             ve2 = test_veranstalter2[i]
-            cursor.execute("INSERT INTO stammtische (datum, anwesenheit, veranstalter, veranstalter2) VALUES (DATE(?), ?, ?, ?)",
-            (dt, an, ve, ve2))
+            try: # try except block um doppelte werte in der db abzufangen
+                cursor.execute("""INSERT INTO stammtische 
+                                (datum, anwesenheit, veranstalter, veranstalter2) 
+                                VALUES (?, ?, ?, ?)""",
+                                (dt, an, ve, ve2))
+            except sqlite3.IntegrityError:
+                st.error(f'{datum_schon_vorhanden_error}: {dt}')
+                break
             conn.commit()
     
 
 
-def testmodus2():
+def testmodus2(): # temporärer testmodus
     dat = datetime.date(2023, 3, 2)
     anw = 'Zierer, Markus, Leon, Reiter, Holzmann'
     veran = 'Reiter'
     veran2 = 'Leon'
-    number = st.number_input('How many datasets', 0, 1000)
-    for i in range(number):
+    number = st.number_input('How many datasets', 0, 1000) # zahlenfeldeingabe
+    # fügt die Anzahl an ausgewählten werten ein und erhöht jedes mal den Tag um 7 
+    # um doppelte werte zu vermeiden, deshalb kein try except block
+    for i in range(number): 
         cursor.execute("INSERT INTO stammtische (datum, anwesenheit, veranstalter, veranstalter2) VALUES (DATE(?), ?, ?, ?)",
         (dat.isoformat(), anw, veran, veran2))
         dat = dat + datetime.timedelta(7)
 
 
 
-def reelle_daten_lesen():
-    cursor2.execute("SELECT * FROM altestammtische")
+def reelle_daten_lesen(): # fügt die aktuellsten Daten in die db ein, Stand 23.03.2025
+    cursor2.execute("SELECT * FROM altestammtische") # cursor2 ist immer die db realle_daten
     rows = cursor2.fetchall()
     for row in rows:
         datum = row[0]
         anwesenheit = row[1]
-        if row[2] == 'Ausw�rts':
+        if row[2] == 'Ausw�rts': # workaround weil beim excel export ä nicht ordentlich angezeigt wurde
             veranstalter = 'Auswärts'
         else:
             veranstalter = row[2]
@@ -109,86 +126,108 @@ def reelle_daten_lesen():
             veranstalter2 = 'Auswärts'
         else:
             veranstalter2 = row[3]
-        cursor.execute("""INSERT INTO stammtische (datum, 
-                            anwesenheit, 
-                            veranstalter, 
-                            veranstalter2) Values 
-                            (?, ?, ?, ?)""", 
-                            (datum, anwesenheit, 
-                            veranstalter, veranstalter2))
+        try: # try except block, um doppelte werte in der db abzufangen
+            cursor.execute("""INSERT INTO stammtische (datum, 
+                                anwesenheit, 
+                                veranstalter, 
+                                veranstalter2) Values 
+                                (?, ?, ?, ?)""", 
+                                (datum, anwesenheit, 
+                                veranstalter, veranstalter2))
+        except sqlite3.IntegrityError:
+            st.error(f'{datum_schon_vorhanden_error}: {datum}')
+            break
         conn.commit()
 
 
 
-def neuen_stammtisch_eintragen():
+def neuen_stammtisch_eintragen(): # fügt einen neuen Eintrag zur db hinzu
     anwesenheit = st.multiselect('Anwesenheit:', Mitglieder, placeholder= 'Bitte Teilnehmer auswählen')
 
     spalte1, spalte2, spalte3 = st.columns(3)
     with spalte1:
         veranstalter = st.radio('Veranstalter:', Orte)
-    with spalte2:
+    with spalte2: # optionaler zweiter Veranstalter
         toggle = st.toggle('Zweiter Veranstaltungsort?')
     with spalte3:
         if toggle == True:
             veranstalter2 = st.radio('Veranstalter 2:', Orte)
-            if veranstalter2 == veranstalter:
+            if veranstalter2 == veranstalter: # sicherstellen, dass derselbe nicht doppelt gewählt wird
                 st.error('Bitte anderen Veranstaltungsort auswählen')
         else:
             veranstalter2 = '-'
-
+# Hier wird das gewünschte Datum abgefragt, hier wird noch in der Datenbank geprüft, ob das 
+# Datum schonmal vorhanden ist, das wird in Zukunft wsl auch über einen try except
+# Block gelöst
     datum = st.date_input('Datum:', format= datumsformat)
     cursor.execute("SELECT COUNT(*) FROM stammtische WHERE datum = ?", (datum,))
     datum_in_db = cursor.fetchone()[0]
 
-    if datetime.date.weekday(datum) != 3:
+    if datetime.date.weekday(datum) != 3: # hier wird geprüft, ob der gewählte Tag ein Donnerstag ist
         st.error('Donnerstog is Stammtisch!!')
         don_check = False
     elif datum_in_db > 0:
-        st.error('Zu diesem Datum gibt es schon einen Eintrag!')
+        st.error(datum_schon_vorhanden_error)
         don_check = False
     else:
         don_check = True
 
+# Hier werden die gewählten Daten in die Datenbank gespeichert
     if st.button("Stammtisch eintragen?") and don_check == True:
         anwesenheit_str = ', '.join(anwesenheit)
         datum_str = datum.isoformat()
-        cursor.execute("INSERT INTO stammtische (datum, anwesenheit, veranstalter, veranstalter2) Values (DATE(?), ?, ?, ?)", 
-        (datum_str, anwesenheit_str, veranstalter, veranstalter2))
+        cursor.execute("""INSERT INTO stammtische 
+                        (datum, anwesenheit, veranstalter, veranstalter2) 
+                        Values (DATE(?), ?, ?, ?)""", 
+                        (datum_str, anwesenheit_str, veranstalter, veranstalter2))
         conn.commit()
         st.success("Stammtisch gespeichert!")
 
 
-def kasse():
+def kasse(): # Zeigt den aktuellen Kassenstand an (aktuell nur Schulden)
     cursor.execute("SELECT * FROM kasse")
     moneten = cursor.fetchall()
-    schulden = {}
+    schulden = {} # dict im Format mitglied: [offene Schulden, geschlossene Schulden]
+    formatierung = {} # dict im Format mitglied : Kassenformat
+# Hier werden die aktuellen Werte aus der db gelesen (aktuell immer leer, weil nichts
+# in Kasse gespeichert wird
     for kollege in moneten:
         schulden[kollege[0]] = kollege[1:]
+# Hier wird ausgewertet an welchem tag welche person anwesend war oder nicht
     cursor.execute("SELECT * FROM stammtische")
     rows = cursor.fetchall()
     for row in rows:
         for mitglied in Mitglieder:
             if mitglied not in row[1]:
                 schulden[mitglied] = schulden[mitglied][0] + 5, schulden[mitglied][1]
-    df = pd.DataFrame(schulden, index= ['Offen', 'Bezahlt'])
+            formatierung[mitglied] = kassenformat
+
+    df = pd.DataFrame(schulden, index= ['Offen', 'Bezahlt'], dtype= float)
+
     st.subheader('Offene Schulden')
-    st.dataframe(df, use_container_width= True, hide_index= False)
+    st.dataframe(df, column_config= formatierung, 
+                use_container_width= True, hide_index= False)
 
-
-def liste_anzeigen(veranstalter, modus):
+# zeigt eine Tabelle mit allen stammtischen in der db an, nimmt als input die selectionen aus 
+# veranstalter_filter() und den Filtermodus aus dem oder toggle aus main()
+def liste_anzeigen(veranstalter: tuple, modus: bool): 
     st.write(veranstalter)
     ver1_empty = len(veranstalter[0]) == 0
     ver2_empty = len(veranstalter[1]) == 0
     cursor.execute("SELECT * FROM stammtische")
     rows = cursor.fetchall()
-    rows.sort()
+# soll nach datum sortieren, funktioniert noch nicht, weil die aktuell als str gespeichert sind
+    rows.sort() 
     rows_filtered = []
-    if modus == False:
+# wenn der filtermodus aus ist, heißt das Und filter modus, also was in veranstalter und
+# veranstalter 2 ausgewählt ist
+    if modus == False: 
         for row in rows:
             if (row[2] in veranstalter[0] or ver1_empty) and (row[3] in veranstalter[1] or ver2_empty):
                 rows_filtered.append(row)
             else:
                 continue
+# wenn der toggle an ist, wird im modus oder gefiltert
     else:
         for row in rows:
             if row[2] in veranstalter[0] or row[3] in veranstalter[1]:
@@ -198,16 +237,20 @@ def liste_anzeigen(veranstalter, modus):
             else:
                 continue
 
-    df = pd.DataFrame(rows_filtered, columns=['Datum ', 'Teilnehmer ', 'Veranstalter ', 'Zweiter Veranstalter'])
+# wenn alles gefiltert wurde, wird alles in einem dataframe objekt angezeigt
+    df = pd.DataFrame(rows_filtered, columns=['Datum ', 'Teilnehmer ', 
+                        'Veranstalter ', 'Zweiter Veranstalter'])
     st.dataframe(df, use_container_width = True, hide_index = True)
 
 
 
-def veranstalter_filter():
+def veranstalter_filter() -> tuple and bool: # Hier werden die Veranstaltungen gefiltert
     cursor.execute("SELECT veranstalter, veranstalter2 FROM stammtische")
     rows = cursor.fetchall()
     ver1 = []
     ver2 = []
+# Hier werden erstmal alle veranstaltungsorte aus der Datenbank gelesen, sodass nur die zum
+# filtern angezeigt werden, die auch möglich sind
     for row in rows:
         if row[0] not in ver1:
             ver1.append(row[0])

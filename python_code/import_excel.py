@@ -1,5 +1,5 @@
-
 import sqlite3
+
 
 
 con = sqlite3.connect('realle_daten.db')
@@ -12,8 +12,7 @@ cur.execute("""CREATE TABLE IF NOT EXISTS altestammtische(
                 anwesenheit TEXT,
                 veranstalter TEXT,
                 veranstalter2 TEXT)""")
-
-
+con.commit()
 
 
 
@@ -77,16 +76,18 @@ def datenbank_schreiben(raw_data: dict):
     con.commit()
     return dic
 
-def read_db():
-    cur.execute("SELECT * FROM altestammtische")
-    rows = cur.fetchall()
-    for row in rows:
-        # if row[2] == 'Auswärts':
-        #     print('Heurecka')
-        # else:
-        #     print(row[2])
-        print(row)
-        print()
+
+
+# def read_db():
+#     cur.execute("SELECT * FROM altestammtische")
+#     rows = cur.fetchall()
+#     for row in rows:
+#         # if row[2] == 'Auswärts':
+#         #     print('Heurecka')
+#         # else:
+#         #     print(row[2])
+#         print(row)
+#         print()
 
             
 
@@ -95,16 +96,8 @@ def main():
     jahr2025 = read_file('Anwesenheit_2025.csv')
     datenbank_schreiben(jahr2024)
     datenbank_schreiben(jahr2025)
+    con.close()
 
-    # read_db()
-    # print(test['06.06.2024'])
 
-main()
 
-con.close()
 
-# dic = {1: ['a', 'b', 'c'], 2: ['c', 'd', 'e']}
-
-# for letter in dic[1]:
-#     index = dic[1].index(letter)
-#     print(dic[2][index])
