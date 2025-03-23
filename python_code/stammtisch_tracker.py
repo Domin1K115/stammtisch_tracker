@@ -6,10 +6,10 @@ import plotly.express as px
 
 
 Mitglieder = ['Leon', 'Zierer', 'Markus', 'Reiter',
- 'Seppe', 'Christoph', 'Holzmann']
+ 'Seppe', 'Christoph', 'Hoize']
 
 Orte = ['Leon', 'Zierer', 'Markus', 'Reiter',
- 'Seppe', 'Christoph', 'Holzmann', 'Auswärts', 'Totalausfall']
+ 'Seppe', 'Christoph', 'Hoize', 'Auswärts', 'Totalausfall']
 
 Sidebarauswahl = ['Neuer Stammtisch', 'Kasse', 'Liste', 'Statistiken', 'Impressum']
 
@@ -18,6 +18,9 @@ datumsformat = 'DD.MM.YYYY'
 # Verbindung zur SQLite-Datenbank herstellen
 conn = sqlite3.connect("app_data.db")
 cursor = conn.cursor()
+
+conn2 = sqlite3.connect("realle_daten.db")
+cursor2 = conn2.cursor()
 
 # Tabelle "stammtische" erstellen
 cursor.execute("""CREATE TABLE IF NOT EXISTS stammtische(
@@ -74,6 +77,7 @@ def testmodus():
             cursor.execute("INSERT INTO stammtische (datum, anwesenheit, veranstalter, veranstalter2) VALUES (DATE(?), ?, ?, ?)",
             (dt, an, ve, ve2))
             conn.commit()
+    
 
 
 def testmodus2():
@@ -86,6 +90,33 @@ def testmodus2():
         cursor.execute("INSERT INTO stammtische (datum, anwesenheit, veranstalter, veranstalter2) VALUES (DATE(?), ?, ?, ?)",
         (dat.isoformat(), anw, veran, veran2))
         dat = dat + datetime.timedelta(7)
+
+
+
+def reelle_daten_lesen():
+    cursor2.execute("SELECT * FROM altestammtische")
+    rows = cursor2.fetchall()
+    for row in rows:
+        datum = row[0]
+        anwesenheit = row[1]
+        if row[2] == 'Ausw�rts':
+            veranstalter = 'Auswärts'
+        else:
+            veranstalter = row[2]
+        if row[3] == '':
+            veranstalter2 = '-'
+        elif row[3] == 'Ausw�rts':
+            veranstalter2 = 'Auswärts'
+        else:
+            veranstalter2 = row[3]
+        cursor.execute("""INSERT INTO stammtische (datum, 
+                            anwesenheit, 
+                            veranstalter, 
+                            veranstalter2) Values 
+                            (?, ?, ?, ?)""", 
+                            (datum, anwesenheit, 
+                            veranstalter, veranstalter2))
+        conn.commit()
 
 
 
@@ -215,36 +246,44 @@ def stammtische_zählen():
     cursor.execute("SELECT * FROM stammtische")
     rows = cursor.fetchall()
     stats = {}
-    for mitglied in Mitglieder:
-        if mitglied not in stats:
-            stats[mitglied] = [0, 0]
+    for ort in Orte:
+        if ort not in stats:
+            if ort in Mitglieder:
+                stats[ort] = [0, 0]
+            else:
+                stats[ort] = [0]
     for row in rows:
         for mitglied in Mitglieder:
             if mitglied in row[1]:
-                stats[mitglied][0] += 1
-            if mitglied in row[2] or mitglied in row[3]:
                 stats[mitglied][1] += 1
+        for ort in Orte:
+            if ort in row[2] or ort in row[3]:
+                stats[ort][0] += 1
     return stats
     
 
 
 def stats_tab1():
     dic = stammtische_zählen()
-    labels = list(dic.keys())
+    labels1 = list(dic.keys())
+    labels2 = labels1[0:7]
     anwesenheiten = []
     veranstaltungen = []
-    for kollege in dic:
-        anwesenheiten.append(dic[kollege][0])
-        veranstaltungen.append(dic[kollege][1])
+    for location in dic:
+        veranstaltungen.append(dic[location][0])
+        try:
+            anwesenheiten.append(dic[location][1])
+        except IndexError:
+            continue
 
     spalte1, spalte2 = st.columns(2)
     with spalte1:
-        kuchen_anwesenheiten = px.pie(names= labels, values= anwesenheiten)
+        kuchen_anwesenheiten = px.pie(names= labels2, values= anwesenheiten)
         kuchen_anwesenheiten.update_traces(textposition='inside', textinfo='label+percent+value')
         st.subheader('Anwesenheit')
         st.plotly_chart(kuchen_anwesenheiten)
     with spalte2:
-        kuchen_veranstaltungen = px.pie(names= labels, values= veranstaltungen)
+        kuchen_veranstaltungen = px.pie(names= labels1, values= veranstaltungen)
         kuchen_veranstaltungen.update_traces(textposition='inside', textinfo= 'label+percent+value')
         st.subheader('Veranstaltungen')
         st.plotly_chart(kuchen_veranstaltungen)
@@ -273,8 +312,7 @@ def test():
     cursor.execute("SELECT * FROM stammtische")
     rows = cursor.fetchall()
     st.write(rows)
-
-
+     
 
 
 # Main
@@ -284,12 +322,17 @@ def main():
         st.header('Stammtisch Tracker:')
         auswahl = st.selectbox('Funktion: ', Sidebarauswahl)
         test_auswahl = st.toggle('Testmodus')
+        if  test_auswahl == True:
+            testmodus()
+            testmodus2()
         if auswahl == Sidebarauswahl[2]:
             oder = st.toggle('Oder Filterung?')
-        testmodus2()
+        
+        if st.button('Realle Daten einfügen') == True:
+            reelle_daten_lesen()
+
         st.html("https://stammtischtracker.streamlit.app")
-    if  test_auswahl == True:
-        testmodus()
+    
     if auswahl == Sidebarauswahl[0]: # Neuer Stammtisch
         st.header(Sidebarauswahl[0], )
         neuen_stammtisch_eintragen()
