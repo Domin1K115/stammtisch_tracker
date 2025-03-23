@@ -208,9 +208,12 @@ def kasse(): # Zeigt den aktuellen Kassenstand an (aktuell nur Schulden)
     st.dataframe(df, column_config= formatierung, 
                 use_container_width= True, hide_index= False)
 
+
+
+
 # zeigt eine Tabelle mit allen stammtischen in der db an, nimmt als input die selectionen aus 
 # veranstalter_filter() und den Filtermodus aus dem oder toggle aus main()
-def liste_anzeigen(veranstalter: tuple, modus: bool): 
+def liste_anzeigen(veranstalter: tuple[list, list], modus: bool): 
     st.write(veranstalter)
     ver1_empty = len(veranstalter[0]) == 0
     ver2_empty = len(veranstalter[1]) == 0
@@ -242,9 +245,11 @@ def liste_anzeigen(veranstalter: tuple, modus: bool):
                         'Veranstalter ', 'Zweiter Veranstalter'])
     st.dataframe(df, use_container_width = True, hide_index = True)
 
+    
 
 
-def veranstalter_filter() -> tuple and bool: # Hier werden die Veranstaltungen gefiltert
+
+def veranstalter_filter() -> tuple[list, list]: # Hier werden die Veranstaltungen gefiltert
     cursor.execute("SELECT veranstalter, veranstalter2 FROM stammtische")
     rows = cursor.fetchall()
     ver1 = []
@@ -259,21 +264,21 @@ def veranstalter_filter() -> tuple and bool: # Hier werden die Veranstaltungen g
         else:
             continue
     spalte1, spalte2 = st.columns(2)
-    with spalte1:
+    with spalte1: # Hier wird die erste Selection abgefragt
         filter1 = st.selectbox('Filter Veranstalter', ver1, 
         index= None, placeholder= 'Bitte auswählen')
         if type(filter1) == type(None):
             filter1 = []
-    with spalte2:
+    with spalte2: # Hier die zweite
         filter2 = st.selectbox('Filter zweiter Veranstalter', 
         ver2, index= None, placeholder= 'Bitte auswählen')
         if type(filter2) == type(None):
             filter2 = []
-    return filter1, filter2
+    return filter1, filter2 # returned ein tuple beider listen
     
 
 
-def datums_filter():
+def datums_filter(): # aktuell nicht in gebrauch
     cursor.execute("SELECT datum FROM stammtische")
     vorhandene_datums = cursor.fetchall()
     vorhandene_datums.sort()
@@ -284,18 +289,19 @@ def datums_filter():
         st.error('Fehler mit dem Datensatz!')
 
 
-
-def stammtische_zählen():
+# Hier wird gezählt wie viele stammtische jedes Mitglied anwesend war und wie oft an welchem
+# Ort er stattgefunden hat
+def stammtische_zählen() -> dict[str:list]: 
     cursor.execute("SELECT * FROM stammtische")
     rows = cursor.fetchall()
     stats = {}
-    for ort in Orte:
+    for ort in Orte: # Hier werden alle Orte als Keys initialisiert
         if ort not in stats:
             if ort in Mitglieder:
                 stats[ort] = [0, 0]
             else:
                 stats[ort] = [0]
-    for row in rows:
+    for row in rows: # Dann wird für jede Zeile in der db der Wert gelesen
         for mitglied in Mitglieder:
             if mitglied in row[1]:
                 stats[mitglied][1] += 1
@@ -305,20 +311,24 @@ def stammtische_zählen():
     return stats
     
 
-
-def stats_tab1():
-    dic = stammtische_zählen()
-    labels1 = list(dic.keys())
+# Hier wird der erste Tab der Statistik Seite angezeigt
+def stats_tab1(): 
+    dic = stammtische_zählen() # erst werden die stammtische gezählt 
+    labels1 = list(dic.keys()) # die labels werden definiert um sie später im dataframe zu nutzen
     labels2 = labels1[0:7]
     anwesenheiten = []
     veranstaltungen = []
-    for location in dic:
+# Hier werden die Zahlen wie oft jeder anwesend war und wie oft an jedem Ort war 
+# in seperate Listen übergeben
+    for location in dic: 
         veranstaltungen.append(dic[location][0])
         try:
             anwesenheiten.append(dic[location][1])
-        except IndexError:
+# der indexerror, der auftritt wenn versucht wird bei den zwei Orten Auswärts und Totalausfall 
+# einen Wert der Anwesenheit abzufragenn, wird übersprungen
+        except IndexError: 
             continue
-
+# Anschließend werden die beiden Listen als Kuchendiagramm dargestellt
     spalte1, spalte2 = st.columns(2)
     with spalte1:
         kuchen_anwesenheiten = px.pie(names= labels2, values= anwesenheiten)
@@ -332,13 +342,13 @@ def stats_tab1():
         st.plotly_chart(kuchen_veranstaltungen)
 
 
-def stats_tab2():
+def stats_tab2(): # noch nicht definiert
     dic = stammtische_zählen()
 
 
 
-def impressum():
-    try:
+def impressum(): # Never gonna give you up!!
+    try: # try except block um zwischen local und Server zu unterscheiden
         st.video('python_code/Rick Astley - Never Gonna Give You Up (Official Music Video).mp4',
         autoplay= True, loop= True)
     except st.streamlit.runtime.media_file_storage.MediaFileStorageError:
@@ -348,53 +358,54 @@ def impressum():
 
     
 
-def test():
-    # tab1, tab2 = st.tabs(["Tab 1", "Tab2"])
-    # tab1.write("this is tab 1")
-    # tab2.write("this is tab 2")
+def test(): # wird aktuell nicht benutzt
     cursor.execute("SELECT * FROM stammtische")
     rows = cursor.fetchall()
     st.write(rows)
      
 
 
-# Main
+# Hier die Main function, sie gibt alles an was in der Sidebar angezeigt wird und führt die 
+# jeweiligen Funktionen aus, wenn sie benötigt werden
 
 def main():
     with st.sidebar:
-        st.header('Stammtisch Tracker:')
-        auswahl = st.selectbox('Funktion: ', Sidebarauswahl)
-        test_auswahl = st.toggle('Testmodus')
+        st.header('Stammtisch Tracker:') # Header
+        auswahl = st.selectbox('Funktion: ', Sidebarauswahl) # Auswahlfeld welche Function genutzt wird
+        test_auswahl = st.toggle('Testmodus') # Temporärer Testmodus
         if  test_auswahl == True:
             testmodus()
             testmodus2()
-        if auswahl == Sidebarauswahl[2]:
+# Hier die Abfrage des oder toggles, die für die Filterung der Liste genutz wird
+        if auswahl == Sidebarauswahl[2]: 
             oder = st.toggle('Oder Filterung?')
         
-        if st.button('Realle Daten einfügen') == True:
+# Hier der Knopf um die tatsächlich aktuellen Daten einzugüfen, aktuell noch hier zum testen
+# auf Dauer wird das automatisiert laufen
+        if st.button('Realle Daten einfügen') == True: 
             reelle_daten_lesen()
 
-        st.html("https://stammtischtracker.streamlit.app")
+        st.html("https://stammtischtracker.streamlit.app") # Url der WebApp
     
-    if auswahl == Sidebarauswahl[0]: # Neuer Stammtisch
+    if auswahl == Sidebarauswahl[0]: # Neuer Stammtisch function wird gecallt
         st.header(Sidebarauswahl[0], )
         neuen_stammtisch_eintragen()
-    elif auswahl == Sidebarauswahl[1]: # Kasse 
+    elif auswahl == Sidebarauswahl[1]: # Kasse function wird gecallt
         st.header(Sidebarauswahl[1])
         kasse()
-    elif auswahl == Sidebarauswahl[2]: # Liste
+    elif auswahl == Sidebarauswahl[2]: # Listen function wird gecallt
         st.header(Sidebarauswahl[2])
         filterkriterium = veranstalter_filter()
         liste_anzeigen(filterkriterium, oder)
         # datums_filter()
-    elif auswahl == Sidebarauswahl[3]: # Statistiken
+    elif auswahl == Sidebarauswahl[3]: # Statistiken function wird gecallt
         st.header(Sidebarauswahl[3])
-        tab1, tab2 = st.tabs(['Kuchen', 'Pokal'])
+        tab1, tab2 = st.tabs(['Kuchen', 'Pokal']) # zwei tabs zur anzeige verschiedener stats
         with tab1:
             stats_tab1()
         with tab2:
             stats_tab2()        
-    elif auswahl == Sidebarauswahl[4]: # Impressum
+    elif auswahl == Sidebarauswahl[4]: # Impressum function wird gecallt
         st.header(Sidebarauswahl[4])
         impressum()
 
