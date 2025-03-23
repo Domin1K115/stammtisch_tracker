@@ -5,7 +5,7 @@ import sqlite3
 con = sqlite3.connect('realle_daten.db')
 cur = con.cursor()
 
-# cur.execute("DROP TABLE IF EXISTS altestammtische")
+cur.execute("DROP TABLE IF EXISTS altestammtische")
 
 cur.execute("""CREATE TABLE IF NOT EXISTS altestammtische(
                 datum DATE PRIMARY KEY,
@@ -91,12 +91,12 @@ def read_db():
             
 
 def main():
-    # jahr2024 = read_file('Anwesenheit_2024.csv')
-    # jahr2025 = read_file('Anwesenheit_2025.csv')
-    # datenbank_schreiben(jahr2024)
-    # datenbank_schreiben(jahr2025)
+    jahr2024 = read_file('Anwesenheit_2024.csv')
+    jahr2025 = read_file('Anwesenheit_2025.csv')
+    datenbank_schreiben(jahr2024)
+    datenbank_schreiben(jahr2025)
 
-    read_db()
+    # read_db()
     # print(test['06.06.2024'])
 
 main()
