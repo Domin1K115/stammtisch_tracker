@@ -20,17 +20,17 @@ conn = sqlite3.connect("app_data.db")
 cursor = conn.cursor()
 
 # Tabelle "stammtische" erstellen
-cursor.execute('''CREATE TABLE IF NOT EXISTS stammtische (
+cursor.execute("""CREATE TABLE IF NOT EXISTS stammtische(
                     datum DATE, 
                     anwesenheit TEXT, 
                     veranstalter TEXT, 
-                    veranstalter2 TEXT)''')
+                    veranstalter2 TEXT)""")
 
 # Tabelle "kasse" erstellen
-cursor.execute('''CREATE TABLE IF NOT EXISTS kasse (
+cursor.execute("""CREATE TABLE IF NOT EXISTS kasse(
                     mitglied TEXT PRIMARY KEY, 
                     offene_schulden INT, 
-                    bezahlte_schulden INT)''')
+                    bezahlte_schulden INT)""")
 # Initialisiere die Kasse
 for mitglied in Mitglieder:
     cursor.execute("SELECT COUNT(*) FROM kasse WHERE mitglied= ?", (mitglied,))
@@ -262,6 +262,7 @@ def impressum():
     except st.streamlit.runtime.media_file_storage.MediaFileStorageError:
         st.video('Rick Astley - Never Gonna Give You Up (Official Music Video).mp4',
         autoplay= True, loop= True)
+    
 
     
 
@@ -286,6 +287,7 @@ def main():
         if auswahl == Sidebarauswahl[2]:
             oder = st.toggle('Oder Filterung?')
         testmodus2()
+        st.html("https://stammtischtracker.streamlit.app")
     if  test_auswahl == True:
         testmodus()
     if auswahl == Sidebarauswahl[0]: # Neuer Stammtisch
