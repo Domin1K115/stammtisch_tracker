@@ -40,6 +40,16 @@ def tabellen_in_db_erstellen(): # Tabelle "stammtische" erstellen
                     mitglied TEXT PRIMARY KEY, 
                     offene_schulden INT, 
                     bezahlte_schulden INT)""")
+    
+    # Tabelle "altestammtische" erstellen
+
+    cursor2.execute("DROP TABLE IF EXISTS altestammtische")
+
+    cursor2.execute("""CREATE TABLE IF NOT EXISTS altestammtische(
+                    datum DATE PRIMARY KEY,
+                    anwesenheit TEXT,
+                    veranstalter TEXT,
+                    veranstalter2 TEXT)""")
 
 tabellen_in_db_erstellen() # funktion wird direkt gecallt
 
@@ -110,7 +120,80 @@ def testmodus2(): # temporärer testmodus
 
 
 
-def reelle_daten_lesen(): # fügt die aktuellsten Daten in die db ein, Stand 23.03.2025
+
+def read_file(filename: str) -> dict:
+    dic = {}
+    headers = []
+    with open(filename, encoding= "utf-8") as file:
+        for row in file:
+            parts = row.split(';')
+            if len(headers) == 0:
+                for key in parts:
+                    if key == '' or key == '\n':
+                        continue
+                    dic[key.strip()] = []
+                    headers.append(key.strip())
+            else:
+                for i in range(len(dic)):
+                    dic[headers[i]].append(parts[i])
+    return dic
+
+
+def stats(raw_data: dict) -> dict:
+    dic = {}
+    for person in raw_data:
+        if person == 'Datum':
+            raw_data[person] = 0
+            continue
+        result = 0
+        for tag in raw_data[person]:
+            if tag == 'Anwesend':
+                result += 1
+        dic[person] = result
+    return dic
+
+
+def datenbank_schreiben(raw_data: dict):
+    dic = {}
+    keys = list(raw_data.keys())
+    for datum in raw_data['Datum']:
+        dic[datum] = []
+        index = raw_data['Datum'].index(datum)
+        for key in keys:
+            if key == 'Datum':
+                continue
+            dic[datum].append(raw_data[key][index])
+    
+    for datum in dic:
+        anwesenheit = ''
+        index = 1
+        for status in dic[datum][:7]:
+            if status == 'Anwesend':
+                anwesenheit += keys[index]
+                anwesenheit += ';'
+            index += 1
+            if index > 7:
+                index = 1
+        veranstalter = dic[datum][7]
+        veranstalter2 = dic[datum][8]
+        cursor2.execute("""INSERT INTO altestammtische(datum, anwesenheit, veranstalter, veranstalter2)
+                    VALUES (?, ?, ?, ?)""", (datum, anwesenheit, veranstalter, veranstalter2))
+    conn2.commit()
+    return dic
+
+
+
+
+def real_daten_importieren():
+    jahr2024 = read_file('Anwesenheit_2024.csv')
+    jahr2025 = read_file('Anwesenheit_2025.csv')
+    datenbank_schreiben(jahr2024)
+    datenbank_schreiben(jahr2025)
+
+
+
+def reale_daten_lesen(): # fügt die aktuellsten Daten in die db ein, Stand 23.03.2025
+    real_daten_importieren()
     cursor2.execute("SELECT * FROM altestammtische") # cursor2 ist immer die db realle_daten
     rows = cursor2.fetchall()
     for row in rows:
@@ -382,8 +465,8 @@ def main():
         
 # Hier der Knopf um die tatsächlich aktuellen Daten einzugüfen, aktuell noch hier zum testen
 # auf Dauer wird das automatisiert laufen
-        if st.button('Realle Daten einfügen') == True: 
-            reelle_daten_lesen()
+        if st.button('Reale Daten einfügen') == True: 
+            reale_daten_lesen()
 
         st.html("https://stammtischtracker.streamlit.app") # Url der WebApp
     

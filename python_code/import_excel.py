@@ -78,6 +78,15 @@ def datenbank_schreiben(raw_data: dict):
 
 
 
+
+def real_daten_importieren():
+    jahr2024 = read_file('Anwesenheit_2024.csv')
+    jahr2025 = read_file('Anwesenheit_2025.csv')
+    datenbank_schreiben(jahr2024)
+    datenbank_schreiben(jahr2025)
+
+
+
 # def read_db():
 #     cur.execute("SELECT * FROM altestammtische")
 #     rows = cur.fetchall()
@@ -88,16 +97,3 @@ def datenbank_schreiben(raw_data: dict):
 #         #     print(row[2])
 #         print(row)
 #         print()
-
-            
-
-def main():
-    jahr2024 = read_file('Anwesenheit_2024.csv')
-    jahr2025 = read_file('Anwesenheit_2025.csv')
-    datenbank_schreiben(jahr2024)
-    datenbank_schreiben(jahr2025)
-    con.close()
-
-
-
-
