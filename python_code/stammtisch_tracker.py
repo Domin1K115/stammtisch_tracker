@@ -170,7 +170,7 @@ def datenbank_schreiben(raw_data: dict):
         for status in dic[datum][:7]:
             if status == 'Anwesend':
                 anwesenheit += keys[index]
-                anwesenheit += ';'
+                anwesenheit += ', '
             index += 1
             if index > 7:
                 index = 1
@@ -189,6 +189,9 @@ def real_daten_importieren():
     jahr2025 = read_file('Anwesenheit_2025.csv')
     datenbank_schreiben(jahr2024)
     datenbank_schreiben(jahr2025)
+    with open('Anwesenheit_2025.csv') as file:
+        for row in file:
+            st.write(row)
 
 
 
