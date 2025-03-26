@@ -69,6 +69,13 @@ def init_kasse():# Kasse initialisieren
 init_kasse() # funktion wird direkt gecallt, damit die db bei jedem refresh initialisiert it
 
 
+# Test
+
+with open('TestText.txt') as testfile:
+    for row in testfile:
+        st.write(row)
+
+
 def testmodus(): # temporärer Testmodus
     with st.sidebar: # legt die zwei Knöpfe Datenbank leeren und Testdaten einfügen an
         löschen = st.button('Datenbanken leeren')
