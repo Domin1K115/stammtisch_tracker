@@ -18,6 +18,8 @@ datumsformat = 'DD.MM.YYYY'
 
 datum_schon_vorhanden_error = 'Zu diesem Datum sind schon Daten vorhanden'
 
+st.session_state.löschen = False
+
 # format d bedeutet int für float in f wechseln optional .n für nachkommmastellen davor
 kassenformat = st.column_config.NumberColumn(format= "%d €")
 
