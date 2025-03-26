@@ -69,12 +69,6 @@ def init_kasse():# Kasse initialisieren
 init_kasse() # funktion wird direkt gecallt, damit die db bei jedem refresh initialisiert it
 
 
-# Test
-
-with open('TestText.txt') as testfile:
-    for row in testfile:
-        st.write(row)
-
 
 def testmodus(): # temporärer Testmodus
     with st.sidebar: # legt die zwei Knöpfe Datenbank leeren und Testdaten einfügen an
@@ -299,12 +293,23 @@ def kasse(): # Zeigt den aktuellen Kassenstand an (aktuell nur Schulden)
                 use_container_width= True, hide_index= False)
 
 
+# Das ist das Overlay, das die Meldung zum löschen anzeigt
+@st.dialog('Wirklich löschen?')
+def eintrag_löschen(menge: int) -> bool:
+    if menge == 1:
+        st.write(f'{menge} Eintrag löschen?')
+    else:
+        st.write(f'{menge} Einträge löschen?')
+    if st.button('Ja') == True:
+        st.session_state.löschen = True
+        st.rerun()
 
 
 # zeigt eine Tabelle mit allen stammtischen in der db an, nimmt als input die selectionen aus 
 # veranstalter_filter() und den Filtermodus aus dem oder toggle aus main()
-def liste_anzeigen(veranstalter: tuple[list, list], modus: bool): 
+def liste_anzeigen(veranstalter: tuple[list, list], filtermodus: bool): 
     st.write(veranstalter)
+    löschen = st.button('Ausgewählte Daten löschen?')
     ver1_empty = len(veranstalter[0]) == 0
     ver2_empty = len(veranstalter[1]) == 0
     cursor.execute("SELECT * FROM stammtische")
@@ -314,7 +319,7 @@ def liste_anzeigen(veranstalter: tuple[list, list], modus: bool):
     rows_filtered = []
 # wenn der filtermodus aus ist, heißt das Und filter modus, also was in veranstalter und
 # veranstalter 2 ausgewählt ist
-    if modus == False: 
+    if filtermodus == False: 
         for row in rows:
             if (row[2] in veranstalter[0] or ver1_empty) and (row[3] in veranstalter[1] or ver2_empty):
                 rows_filtered.append(row)
@@ -330,10 +335,24 @@ def liste_anzeigen(veranstalter: tuple[list, list], modus: bool):
             else:
                 continue
 
+
 # wenn alles gefiltert wurde, wird alles in einem dataframe objekt angezeigt
     df = pd.DataFrame(rows_filtered, columns=['Datum ', 'Teilnehmer ', 
                         'Veranstalter ', 'Zweiter Veranstalter'])
-    st.dataframe(df, use_container_width = True, hide_index = True)
+    output = st.dataframe(df, use_container_width = True, hide_index = True, on_select= "rerun",
+    selection_mode= 'multi-row')
+
+
+    if löschen == True:
+        eintrag_löschen(len(output['selection']['rows']))
+    if st.session_state.löschen == True:
+        for row in output['selection']['rows']:
+            datum = df.iat[row,0]
+            cursor.execute("""DELETE FROM stammtische WHERE datum = ?""", (datum,))
+            conn.commit()
+        st.session_state.löschen = False
+        st.rerun()
+
 
     
 
@@ -462,14 +481,19 @@ def main():
     with st.sidebar:
         st.header('Stammtisch Tracker:') # Header
         auswahl = st.selectbox('Funktion: ', Sidebarauswahl) # Auswahlfeld welche Function genutzt wird
+
+
+
+# Hier die Abfrage des oder toggles, die für die Filterung der Liste genutzt wird 
+        if auswahl == Sidebarauswahl[2]: 
+            oder = st.toggle('Oder Filterung?')
+        
+
         test_auswahl = st.toggle('Testmodus') # Temporärer Testmodus
         if  test_auswahl == True:
             testmodus()
             testmodus2()
-# Hier die Abfrage des oder toggles, die für die Filterung der Liste genutz wird
-        if auswahl == Sidebarauswahl[2]: 
-            oder = st.toggle('Oder Filterung?')
-        
+
 # Hier der Knopf um die tatsächlich aktuellen Daten einzugüfen, aktuell noch hier zum testen
 # auf Dauer wird das automatisiert laufen
         if st.button('Reale Daten einfügen') == True: 
