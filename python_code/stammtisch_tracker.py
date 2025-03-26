@@ -18,7 +18,7 @@ datumsformat = 'DD.MM.YYYY'
 
 datum_schon_vorhanden_error = 'Zu diesem Datum sind schon Daten vorhanden'
 
-if st.session_state.löschen != type(bool):
+if st.session_state.löschen != True:
     st.session_state.löschen = False
 
 # format d bedeutet int für float in f wechseln optional .n für nachkommmastellen davor
