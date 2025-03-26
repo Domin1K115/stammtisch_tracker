@@ -196,9 +196,6 @@ def real_daten_importieren():
     jahr2025 = read_file('anwesenheit_2025.csv')
     datenbank_schreiben(jahr2024)
     datenbank_schreiben(jahr2025)
-    with open('anwesenheit_2025.csv') as file:
-        for row in file:
-            st.write(row)
 
 
 
