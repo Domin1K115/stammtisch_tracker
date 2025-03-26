@@ -192,11 +192,11 @@ def datenbank_schreiben(raw_data: dict):
 
 
 def real_daten_importieren():
-    jahr2024 = read_file('Anwesenheit_2024.csv')
-    jahr2025 = read_file('Anwesenheit_2025.csv')
+    jahr2024 = read_file('anwesenheit_2024.csv')
+    jahr2025 = read_file('anwesenheit_2025.csv')
     datenbank_schreiben(jahr2024)
     datenbank_schreiben(jahr2025)
-    with open('Anwesenheit_2025.csv') as file:
+    with open('anwesenheit_2025.csv') as file:
         for row in file:
             st.write(row)
 
