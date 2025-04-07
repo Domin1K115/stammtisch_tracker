@@ -15,6 +15,7 @@ Orte = ['Leon', 'Zierer', 'Markus', 'Reiter',
 Sidebarauswahl = ['Neuer Stammtisch', 'Kasse', 'Liste', 'Statistiken', 'Impressum']
 
 datumsformat = 'DD.MM.YYYY'
+datumsformat2 = "%d.%m.%Y"
 
 datum_schon_vorhanden_error = 'Zu diesem Datum sind schon Daten vorhanden'
 
@@ -201,7 +202,7 @@ def reale_daten_lesen(): # fügt die aktuellsten Daten in die db ein, Stand 23.0
     cursor2.execute("SELECT * FROM altestammtische") # cursor2 ist immer die db realle_daten
     rows = cursor2.fetchall()
     for row in rows:
-        datum = row[0]
+        datum = row[0][6:] + '-' + row[0][3:5] + '-' + row[0][0:2] # Datum manuell umdrehen sodass es im format YYYY-MM-DD ist
         anwesenheit = row[1]
         if row[2] == 'Ausw�rts': # workaround weil beim excel export ä nicht ordentlich angezeigt wurde
             veranstalter = 'Auswärts'
@@ -247,6 +248,7 @@ def neuen_stammtisch_eintragen(): # fügt einen neuen Eintrag zur db hinzu
 # Datum schonmal vorhanden ist, das wird in Zukunft wsl auch über einen try except
 # Block gelöst
     datum = st.date_input('Datum:', format= datumsformat)
+    
     cursor.execute("SELECT COUNT(*) FROM stammtische WHERE datum = ?", (datum,))
     datum_in_db = cursor.fetchone()[0]
 
@@ -262,11 +264,10 @@ def neuen_stammtisch_eintragen(): # fügt einen neuen Eintrag zur db hinzu
 # Hier werden die gewählten Daten in die Datenbank gespeichert
     if st.button("Stammtisch eintragen?") and don_check == True:
         anwesenheit_str = ', '.join(anwesenheit)
-        datum_str = datum.isoformat()
         cursor.execute("""INSERT INTO stammtische 
                         (datum, anwesenheit, veranstalter, veranstalter2) 
-                        Values (DATE(?), ?, ?, ?)""", 
-                        (datum_str, anwesenheit_str, veranstalter, veranstalter2))
+                        Values (?, ?, ?, ?)""", 
+                        (datum, anwesenheit_str, veranstalter, veranstalter2))
         conn.commit()
         st.success("Stammtisch gespeichert!")
 
@@ -318,7 +319,10 @@ def liste_anzeigen(veranstalter: tuple[list, list], filtermodus: bool):
     cursor.execute("SELECT * FROM stammtische")
     rows = cursor.fetchall()
 # soll nach datum sortieren, funktioniert noch nicht, weil die aktuell als str gespeichert sind
-    rows.sort() 
+    rows.sort()
+    for row in rows:
+        st.write(row[0])
+        # row[0] = datetime.date.fromisoformat(row[0])
     rows_filtered = []
 # wenn der filtermodus aus ist, heißt das Und filter modus, also was in veranstalter und
 # veranstalter 2 ausgewählt ist
@@ -483,8 +487,7 @@ def test(): # wird aktuell nicht benutzt
 def main():
     with st.sidebar:
         st.header('Stammtisch Tracker:') # Header
-        auswahl = st.selectbox('Funktion: ', Sidebarauswahl) # Auswahlfeld welche Function genutzt wird
-
+        auswahl = st.selectbox('Funktion: ', Sidebarauswahl) # Auswahlfeld welche Function genutzt 
 
 
 # Hier die Abfrage des oder toggles, die für die Filterung der Liste genutzt wird 
