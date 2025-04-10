@@ -1,23 +1,15 @@
-import datetime
-# import pandas as pd
-import sqlite3 
 
 
-con = sqlite3.connect("Test_db.db")
+test = {} 
 
-cur = con.cursor()
-
-cur.execute("CREATE TABLE movie(title, year, score)")
-
-
-cursor.execute("CREATE TABLE IF NOT EXISTS stammtische(datum DATE, anwesenheit TEXT, veranstalter TEXT, veranstalter2 TEXT)")
-
+test[0] = set()
+test[0].add(('sixtix', 'octity'))
+test[0].add(('testy', 'testo'))
+test[0].add(('testy', 'testie'))
+test[5] = 'seventy'
 
 
-# dic = {}
+print(test)
 
-# dic['t'] = 5
-
-# df = pd.DataFrame(dic)
-
-# print(df)
+if 5 in test:
+    print(True)

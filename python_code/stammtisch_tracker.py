@@ -44,6 +44,11 @@ def tabellen_in_db_erstellen(): # Tabelle "stammtische" erstellen
                     mitglied TEXT PRIMARY KEY, 
                     offene_schulden INT, 
                     bezahlte_schulden INT)""")
+
+    cursor.execute("""CREATE TABLE IF NOT EXISTS schulden(
+                    mitglied TEXT,
+                    datum DATE,
+                    bezahlt BOOLEAN)""")
     
     # Tabelle "altestammtische" erstellen
 
@@ -272,25 +277,62 @@ def neuen_stammtisch_eintragen(): # fügt einen neuen Eintrag zur db hinzu
         st.success("Stammtisch gespeichert!")
 
 
+def alte_stammtische_auswerten():
+    # Hier wird ausgewertet an welchem tag welche person anwesend war oder nicht
+    cursor.execute("SELECT * FROM stammtische")
+    rows = cursor.fetchall()
+    fehltage = {}
+    for row in rows:
+        for mitglied in Mitglieder:
+            if mitglied not in fehltage:
+                fehltage[mitglied] = set()
+            if mitglied not in row[1]:
+                fehltage[mitglied].add((row[0], False))
+    temp_list = []
+    for mitglied, fehl in fehltage.items():
+        for datum, bezahlt in fehl:
+            temp_list.append((mitglied, datum, bezahlt))
+    cursor.executemany("""INSERT INTO schulden (mitglied, datum, bezahlt) VALUES 
+                    (?, ?, ?)""", temp_list)
+    conn.commit()
+
+def datenbank_leeren():
+    cursor.execute("DROP TABLE IF EXISTS schulden")
+    
+    cursor.execute("""CREATE TABLE IF NOT EXISTS schulden(
+                    mitglied TEXT,
+                    datum DATE,
+                    bezahlt BOOLEAN)""")
+                
+    
+
+
 def kasse(): # Zeigt den aktuellen Kassenstand an (aktuell nur Schulden)
-    cursor.execute("SELECT * FROM kasse")
-    moneten = cursor.fetchall()
-    schulden = {} # dict im Format mitglied: [offene Schulden, geschlossene Schulden]
+    # Testy mesty
+    stammtische_alt = st.button('Alte Daten auswerten')
+    db_leeren = st.button('Datenbank leeren?')
+    if db_leeren == True:
+        datenbank_leeren()
+    if stammtische_alt == True:
+        alte_stammtische_auswerten()
+
+    cursor.execute("SELECT * FROM schulden")
+    schulden = cursor.fetchall()
+    st.write(schulden)
+    mitglieder_schulden = {} # dict im Format mitglied: [offene Schulden, geschlossene Schulden]
     formatierung = {} # dict im Format mitglied : Kassenformat
 # Hier werden die aktuellen Werte aus der db gelesen (aktuell immer leer, weil nichts
 # in Kasse gespeichert wird
-    for kollege in moneten:
-        schulden[kollege[0]] = kollege[1:]
-# Hier wird ausgewertet an welchem tag welche person anwesend war oder nicht
-    cursor.execute("SELECT * FROM stammtische")
-    rows = cursor.fetchall()
-    for row in rows:
-        for mitglied in Mitglieder:
-            if mitglied not in row[1]:
-                schulden[mitglied] = schulden[mitglied][0] + 5, schulden[mitglied][1]
-            formatierung[mitglied] = kassenformat
+    for name, datum, bezahlt in schulden:
+        if name not in mitglieder_schulden:
+            mitglieder_schulden[name] = [0, 0]
+        if bezahlt == True:
+            mitglieder_schulden[name][1] += 5
+        else:
+            mitglieder_schulden[name][0] += 5
+        formatierung[name] = kassenformat
 
-    df = pd.DataFrame(schulden, index= ['Offen', 'Bezahlt'], dtype= float)
+    df = pd.DataFrame(mitglieder_schulden, index= ['Offen', 'Bezahlt'], dtype= float)
 
     st.subheader('Offene Schulden')
     st.dataframe(df, column_config= formatierung, 
